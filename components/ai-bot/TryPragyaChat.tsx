@@ -426,15 +426,6 @@ export default function TryPragyaChat({
                   <p className="text-center text-[12px] font-medium text-orange-700">{summarizeHint}</p>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowMemoryPolicy(true)}
-                className="mt-6 text-[12px] font-bold text-gray-400 hover:text-orange-500 transition-colors flex items-center gap-1.5"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Memory Policy
-              </button>
             </div>
           </div>
 
