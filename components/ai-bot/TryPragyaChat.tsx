@@ -766,7 +766,7 @@ export default function TryPragyaChat({
                 </div>
 
                 <div className={`transition-all duration-700 ${!hasStarted ? 'opacity-0 h-0 overflow-hidden mt-0' : 'flex justify-center items-center mt-4 text-[11px] text-gray-500 font-medium opacity-100 h-auto'}`}>
-                  <p className="hidden md:block">Pragya may produce inaccurate information about people, places, or facts.</p>
+                  <p className="hidden md:block">Hey Attrangi may produce inaccurate information about people, places, or facts.</p>
                   <button
                     type="button"
                     onClick={() => setShowMemoryPolicy(true)}
