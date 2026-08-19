@@ -1,12 +1,37 @@
 import { NextResponse } from 'next/server'
 import { auth } from "@/auth.config"
 import { prisma } from "@/lib/prisma"
+import { enforceSharedLimit } from "@/lib/limits/checkLimits"
 
 export async function POST(req: Request) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+        const userId = session.user.id
+
+        const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { plan: true },
+        })
+        const plan = dbUser?.plan || "FREE"
+
+        const weeklyCheck = await enforceSharedLimit({
+            userId,
+            action: "ASSESSMENT_SUBMIT_WEEKLY",
+            countActions: ["ASSESSMENT_SUBMIT_WEEKLY", "DYNAMIC_ASSESSMENT_WEEKLY"],
+            plan,
+            limitFree: 5,
+            limitPremium: 5,
+            windowMs: 7 * 24 * 60 * 60 * 1000,
+            errorMessage: "Weekly assessment limit reached. You can take up to 5 assessments per week (normal + dynamic combined).",
+        })
+        if (!weeklyCheck.allowed) {
+            return NextResponse.json(
+                { error: "LIMIT_EXCEEDED", message: weeklyCheck.message, resetInSeconds: weeklyCheck.resetInSeconds },
+                { status: 429 }
+            )
         }
 
         const body = await req.json()
@@ -17,7 +42,7 @@ export async function POST(req: Request) {
         const db: any = prisma
         const saved = await db.patientAssessmentResult.create({
             data: {
-                userId: session.user.id,
+                userId,
                 assessmentId: body.assessmentId || "unknown",
                 date: body.date || new Date().toISOString().split('T')[0],
                 results: body, // store full payload
