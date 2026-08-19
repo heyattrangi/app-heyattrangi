@@ -3,7 +3,7 @@ import { auth } from "@/auth.config"
 import { prisma } from "@/lib/prisma"
 import { SCREENERS } from "@/lib/data/screeners"
 import { scoreAssessment } from "@/lib/assessments/scoreAssessment"
-import { enforceLimit } from "@/lib/limits/checkLimits"
+import { enforceSharedLimit } from "@/lib/limits/checkLimits"
 
 export async function POST(req: Request) {
   try {
@@ -38,15 +38,17 @@ export async function POST(req: Request) {
     })
     const plan = dbUser?.plan || "FREE"
 
-    // Weekly limit: Free = 5/week, Premium = 20/week
-    const weeklyCheck = await enforceLimit({
+    // Combined weekly limit: 5 assessments/week across normal + dynamic types.
+    // Both ASSESSMENT_SUBMIT_WEEKLY and DYNAMIC_ASSESSMENT_WEEKLY count toward the same pool.
+    const weeklyCheck = await enforceSharedLimit({
       userId,
       action: "ASSESSMENT_SUBMIT_WEEKLY",
+      countActions: ["ASSESSMENT_SUBMIT_WEEKLY", "DYNAMIC_ASSESSMENT_WEEKLY"],
       plan,
       limitFree: 5,
-      limitPremium: 20,
+      limitPremium: 5,
       windowMs: 7 * 24 * 60 * 60 * 1000,
-      errorMessage: "Weekly assessment limit reached. You can take 5 assessments per week on the free plan.",
+      errorMessage: "Weekly assessment limit reached. You can take up to 5 assessments per week (normal + dynamic combined).",
     })
     if (!weeklyCheck.allowed) {
       return NextResponse.json(

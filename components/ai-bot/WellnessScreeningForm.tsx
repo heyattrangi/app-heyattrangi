@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import MindMatrixResult from "@/components/ai-bot/MindMatrixResult"
@@ -51,6 +52,7 @@ function formatMmSs(totalSeconds: number) {
 export default function WellnessScreeningForm() {
     const searchParams = useSearchParams()
     const resultParam = searchParams.get("result")
+    const router = useRouter()
 
     const [step, setStep] = useState(0)
     const [secondsRemaining, setSecondsRemaining] = useState(STEP_TIMER_SECONDS)
@@ -60,6 +62,23 @@ export default function WellnessScreeningForm() {
     const [submittedRiskLevel, setSubmittedRiskLevel] = useState<string | null>(
         () => (resultParam && resultParam.trim() ? resultParam.trim() : null)
     )
+    const [limitExceeded, setLimitExceeded] = useState(false)
+    const [limitResetDate, setLimitResetDate] = useState<string | null>(null)
+
+    // Check weekly assessment limit on mount
+    useEffect(() => {
+        fetch("/api/patient/limits")
+            .then((r) => r.json())
+            .then((data) => {
+                if (data?.usage?.assessments?.remaining === 0) {
+                    setLimitExceeded(true)
+                    setLimitResetDate(data.usage.assessments.resetDate || null)
+                }
+            })
+            .catch(() => {
+                // Silently ignore — allow form to render if check fails
+            })
+    }, [])
 
     // --- HANDLERS ---
     const handleNext = () => {
@@ -123,6 +142,14 @@ export default function WellnessScreeningForm() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
             })
+            if (res.status === 429) {
+                // Limit was hit concurrently — show locked state
+                setLimitExceeded(true)
+                const json = await res.json().catch(() => ({}))
+                setLimitResetDate(null)
+                console.warn("Assessment weekly limit reached:", json.message)
+                return
+            }
             if (res.ok) {
                 const json = await res.json()
                 const level =
@@ -136,6 +163,48 @@ export default function WellnessScreeningForm() {
         } finally {
             setIsSubmitting(false)
         }
+    }
+
+    // --- Limit-exceeded gate ---
+    if (limitExceeded) {
+        const formattedReset = limitResetDate
+            ? new Date(limitResetDate).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "short",
+                  day: "numeric",
+              })
+            : null
+
+        return (
+            <div className="mx-auto max-w-2xl space-y-6 p-8 text-center">
+                <div
+                    className="inline-flex h-16 w-16 items-center justify-center rounded-full"
+                    style={{ background: "var(--color-accent-light)", color: "var(--color-accent)" }}
+                >
+                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h2 className="text-2xl font-bold" style={{ color: "var(--color-text-primary)" }}>
+                    Weekly limit reached
+                </h2>
+                <p className="text-base" style={{ color: "var(--color-text-secondary)" }}>
+                    You can take up to <strong>5 assessments per week</strong> (normal + dynamic combined).
+                    {formattedReset
+                        ? <> Your limit resets on <strong>{formattedReset}</strong>.</>
+                        : " Your limit will reset in 7 days from your first assessment this week."}
+                </p>
+                <button
+                    type="button"
+                    onClick={() => router.push("/patient/library")}
+                    className="inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: "var(--color-brand)" }}
+                >
+                    Back to Library
+                </button>
+            </div>
+        )
     }
 
     if (submittedRiskLevel) {

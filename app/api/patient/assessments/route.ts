@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from "@/auth.config"
 import { prisma } from "@/lib/prisma"
-import { enforceLimit } from "@/lib/limits/checkLimits"
+import { enforceSharedLimit } from "@/lib/limits/checkLimits"
 
 export async function POST(req: Request) {
     try {
@@ -17,14 +17,15 @@ export async function POST(req: Request) {
         })
         const plan = dbUser?.plan || "FREE"
 
-        const weeklyCheck = await enforceLimit({
+        const weeklyCheck = await enforceSharedLimit({
             userId,
             action: "ASSESSMENT_SUBMIT_WEEKLY",
+            countActions: ["ASSESSMENT_SUBMIT_WEEKLY", "DYNAMIC_ASSESSMENT_WEEKLY"],
             plan,
             limitFree: 5,
-            limitPremium: 20,
+            limitPremium: 5,
             windowMs: 7 * 24 * 60 * 60 * 1000,
-            errorMessage: "Weekly assessment limit reached. You can take 5 assessments per week on the free plan.",
+            errorMessage: "Weekly assessment limit reached. You can take up to 5 assessments per week (normal + dynamic combined).",
         })
         if (!weeklyCheck.allowed) {
             return NextResponse.json(

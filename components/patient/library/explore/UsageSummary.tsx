@@ -15,9 +15,10 @@ interface UsageItemProps {
   limit: number | string
   resetDate: string | null
   icon: React.ReactNode
+  resetCadence?: string
 }
 
-function UsageItem({ label, used, limit, resetDate, icon }: UsageItemProps) {
+function UsageItem({ label, used, limit, resetDate, icon, resetCadence = "daily" }: UsageItemProps) {
   const isUnlimited = limit === "unlimited"
 
   // Calculate percentage and status colors
@@ -128,7 +129,7 @@ function UsageItem({ label, used, limit, resetDate, icon }: UsageItemProps) {
             </span>
           )}
           <span className="text-[10px] text-slate-400 font-medium ml-auto">
-            {formattedResetDate ? `Resets at ${formattedResetDate}` : isUnlimited ? "Included in plan" : "Resets daily"}
+            {formattedResetDate ? `Resets at ${formattedResetDate}` : isUnlimited ? "Included in plan" : `Resets ${resetCadence}`}
           </span>
         </div>
       </div>
@@ -204,11 +205,12 @@ export default function UsageSummary() {
         )}
         {usage?.assessments && (
           <UsageItem
-            label="Self Assessments"
+            label="Assessments (Weekly)"
             used={usage.assessments.used}
             limit={usage.assessments.limit}
             resetDate={usage.assessments.resetDate}
             icon={<ShieldCheck className="w-4 h-4 text-indigo-600" />}
+            resetCadence="weekly"
           />
         )}
         {usage?.read && (
