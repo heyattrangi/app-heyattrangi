@@ -54,8 +54,8 @@ export async function GET() {
     }
 
     // --- 2. Assessments submitted (ASSESSMENT_SUBMIT_WEEKLY) ---
-    // limit: Free 1, Premium 3. Window: 7 days.
-    const assessmentLimit = isPremium ? 3 : 1
+    // limit: Free 5, Premium 20. Window: 7 days.
+    const assessmentLimit = isPremium ? 20 : 5
     const assessmentWindowMs = 7 * 24 * 60 * 60 * 1000
     const assessmentWindowStart = new Date(now.getTime() - assessmentWindowMs)
     const assessmentUsed = await prisma.technicalLimitLog.count({

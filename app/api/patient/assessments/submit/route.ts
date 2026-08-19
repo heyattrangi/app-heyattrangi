@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     })
     const plan = dbUser?.plan || "FREE"
 
-    // Weekly limit: Free = 1/week, Premium = 3/week
+    // Weekly limit: Free = 5/week, Premium = 20/week
     const weeklyCheck = await enforceLimit({
       userId,
       action: "ASSESSMENT_SUBMIT_WEEKLY",
