@@ -53,15 +53,16 @@ export async function GET() {
       }
     }
 
-    // --- 2. Assessments submitted (ASSESSMENT_SUBMIT_WEEKLY) ---
-    // limit: Free 1, Premium 3. Window: 7 days.
-    const assessmentLimit = isPremium ? 3 : 1
+    // --- 2. Assessments submitted (ASSESSMENT_SUBMIT_WEEKLY + DYNAMIC_ASSESSMENT_WEEKLY combined) ---
+    // Combined limit: 5/week for all plans. Both normal and dynamic assessments count.
+    const ASSESSMENT_WEEKLY_LIMIT = 5
+    const assessmentLimit = ASSESSMENT_WEEKLY_LIMIT
     const assessmentWindowMs = 7 * 24 * 60 * 60 * 1000
     const assessmentWindowStart = new Date(now.getTime() - assessmentWindowMs)
     const assessmentUsed = await prisma.technicalLimitLog.count({
       where: {
         userId,
-        action: "ASSESSMENT_SUBMIT_WEEKLY",
+        action: { in: ["ASSESSMENT_SUBMIT_WEEKLY", "DYNAMIC_ASSESSMENT_WEEKLY"] },
         timestamp: { gte: assessmentWindowStart },
       },
     })
@@ -71,7 +72,7 @@ export async function GET() {
       const oldestLog = await prisma.technicalLimitLog.findFirst({
         where: {
           userId,
-          action: "ASSESSMENT_SUBMIT_WEEKLY",
+          action: { in: ["ASSESSMENT_SUBMIT_WEEKLY", "DYNAMIC_ASSESSMENT_WEEKLY"] },
           timestamp: { gte: assessmentWindowStart },
         },
         orderBy: { timestamp: "asc" },
