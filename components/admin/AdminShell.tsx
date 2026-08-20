@@ -37,6 +37,11 @@ const primaryNav: NavItem[] = [
     href: "/admin/users",
     description: "Operational lookup",
   },
+  {
+    label: "Subscriptions",
+    href: "/admin/subscriptions",
+    description: "Paid user management",
+  },
 ]
 
 const legacyNav: NavItem[] = [
