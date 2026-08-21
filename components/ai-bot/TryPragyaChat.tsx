@@ -1254,39 +1254,12 @@ export default function TryPragyaChat({
                                                 </svg>
                                             </button>
                                         </div>
-                                    ) : (
-                                        !isTyping &&
-                                        !isLoading &&
-                                        hasStarted && (
-                                            <div className="absolute bottom-full mb-3 left-2 z-20">
-                                                <button
-                                                    type="button"
-                                                    onClick={handleShowSuggestions}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-orange-200 text-orange-600 rounded-full text-[12px] font-bold shadow-[0_2px_8px_rgba(249,107,19,0.1)] hover:bg-orange-50 hover:-translate-y-0.5 transition-all"
-                                                >
-                                                    <svg
-                                                        className="w-3.5 h-3.5 text-orange-500 animate-pulse"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                                                        />
-                                                    </svg>
-                                                    Suggestions ✨
-                                                </button>
-                                            </div>
-                                        )
-                                    )}
+                                    ) : null}
 
                                     <div
                                         className={`transition-all duration-700 ${!hasStarted ? "opacity-0 h-0 overflow-hidden mb-0" : "flex justify-between items-center mb-2 px-2 md:hidden opacity-100 h-auto"}`}
                                     >
-                                        <span className="text-[12px] text-gray-400 font-bold">
+                                        <span className="text-[12px] text-gray-400 font-bold hidden">
                                             {isGuestSession
                                                 ? `${limitData.remaining} free trial chats remaining`
                                                 : plan !== "PRO"
@@ -1336,48 +1309,58 @@ export default function TryPragyaChat({
                                                 </div>
                                             )}
 
+                                            {/* Microhpone button swapped into the inner input structure */}
                                             {!isRecording && (
                                                 <button
-                                                    type="submit"
-                                                    disabled={isLoading || !inputMessage.trim() || isTranscribing}
-                                                    className={`p-2 rounded-full h-[36px] w-[36px] max-[359px]:h-[32px] max-[359px]:w-[32px] shrink-0 mb-1 transition-all duration-300 flex items-center justify-center ${isLoading || !inputMessage.trim() || isTranscribing
+                                                    type="button"
+                                                    onClick={handleMicClick}
+                                                    disabled={isLoading || isTranscribing}
+                                                    className={`p-2 rounded-full h-[36px] w-[36px] max-[359px]:h-[32px] max-[359px]:w-[32px] shrink-0 mb-1 transition-all duration-300 flex items-center justify-center ${isLoading || isTranscribing
                                                         ? "text-gray-400 bg-[#f4f4f5]"
                                                         : "text-gray-700 bg-[#f4f4f5] hover:bg-[#e4e4e7]"
                                                         }`}
+                                                    title="Start Voice Input"
                                                 >
-                                                    <svg
-                                                        className="w-[18px] h-[18px] transform translate-x-[-1px] translate-y-[1px]"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                                    <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                                                     </svg>
                                                 </button>
                                             )}
                                         </div>
                                         
-                                        <button
-                                            type="button"
-                                            onClick={handleMicClick}
-                                            disabled={isLoading || isTranscribing}
-                                            className={`rounded-full w-[54px] h-[54px] max-[389px]:w-[48px] max-[389px]:h-[48px] max-[359px]:w-[42px] max-[359px]:h-[42px] shrink-0 mb-1 transition-all duration-300 flex items-center justify-center font-bold text-[14px] ${
-                                                isRecording ? "bg-red-500 text-white" :
-                                                (isLoading || isTranscribing) ? "bg-orange-300 text-white" :
-                                                "bg-[#f4a261] text-white hover:bg-[#e39454] shadow-[0_2px_8px_rgba(244,162,97,0.4)]"
-                                            }`}
-                                            title={isRecording ? "Stop Recording" : "Start Voice Input"}
-                                        >
-                                            {isRecording ? (
+                                        {/* Outer button position: Send button (normal) or Stop button (recording) */}
+                                        {isRecording ? (
+                                            <button
+                                                type="button"
+                                                onClick={handleMicClick}
+                                                disabled={isLoading || isTranscribing}
+                                                className={`rounded-full w-[54px] h-[54px] max-[389px]:w-[48px] max-[389px]:h-[48px] max-[359px]:w-[42px] max-[359px]:h-[42px] shrink-0 mb-1 transition-all duration-300 flex items-center justify-center font-bold text-[14px] bg-[#f4a261] text-white hover:bg-[#e39454] shadow-[0_2px_8px_rgba(244,162,97,0.4)]`}
+                                                title="Stop Recording"
+                                            >
                                                 <svg className="w-[20px] h-[20px]" fill="currentColor" viewBox="0 0 24 24">
                                                     <rect x="6" y="6" width="12" height="12" rx="2" />
                                                 </svg>
-                                            ) : (
-                                                <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="submit"
+                                                disabled={isLoading || !inputMessage.trim() || isTranscribing}
+                                                className={`rounded-full w-[54px] h-[54px] max-[389px]:w-[48px] max-[389px]:h-[48px] max-[359px]:w-[42px] max-[359px]:h-[42px] shrink-0 mb-1 transition-all duration-300 flex items-center justify-center font-bold text-[14px] ${
+                                                    (isLoading || !inputMessage.trim() || isTranscribing) ? "bg-orange-300 text-white" :
+                                                    "bg-[#f4a261] text-white hover:bg-[#e39454] shadow-[0_2px_8px_rgba(244,162,97,0.4)]"
+                                                }`}
+                                                title="Send Message"
+                                            >
+                                                <svg
+                                                    className="w-[20px] h-[20px] transform translate-x-[-1px] translate-y-[1px]"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                                 </svg>
-                                            )}
-                                        </button>
+                                            </button>
+                                        )}
                                     </form>
                                  </div>
                              </div>

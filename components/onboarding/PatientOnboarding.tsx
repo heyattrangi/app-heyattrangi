@@ -175,6 +175,17 @@ export default function PatientOnboarding() {
 
     const handleFinish = async (action: "chat" | "dashboard") => {
         setIsLoading(true)
+
+        // Specifically handle the already-onboarded case so it does not block navigation
+        if ((session?.user as any)?.role === "PATIENT") {
+            if (action === "chat") {
+                router.push("/patient/ai-bot")
+            } else {
+                router.push("/patient/dashboard")
+            }
+            return
+        }
+
         try {
             const response = await fetch("/api/onboarding/patient", {
                 method: "POST",
