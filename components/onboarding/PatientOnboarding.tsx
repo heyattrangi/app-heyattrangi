@@ -28,7 +28,7 @@ type OnboardingData = {
 
 export default function PatientOnboarding() {
     const router = useRouter()
-    const { data: session } = useSession()
+    const { data: session, update } = useSession()
 
     const [step, setStep] = useState(0)
     const [data, setData] = useState<OnboardingData>({
@@ -205,6 +205,9 @@ export default function PatientOnboarding() {
             })
 
             if (response.ok) {
+                // Wait for the existing authentication/session state to resolve before pushing
+                await update()
+                
                 if (action === "chat") {
                     router.push("/patient/ai-bot")
                 } else {
