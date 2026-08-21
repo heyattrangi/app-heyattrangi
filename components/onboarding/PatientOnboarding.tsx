@@ -28,7 +28,7 @@ type OnboardingData = {
 
 export default function PatientOnboarding() {
     const router = useRouter()
-    const { data: session } = useSession()
+    const { data: session, update } = useSession()
 
     const [step, setStep] = useState(0)
     const [data, setData] = useState<OnboardingData>({
@@ -205,6 +205,12 @@ export default function PatientOnboarding() {
             })
 
             if (response.ok) {
+                // Force a client-side session refresh so the new PATIENT role and 
+                // identity are loaded before the destination route renders.
+                // This resolves the bug where new accounts were occasionally 
+                // falling back to Guest or Empty states.
+                await update()
+
                 if (action === "chat") {
                     router.push("/patient/ai-bot")
                 } else {
