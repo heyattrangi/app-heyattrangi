@@ -182,6 +182,52 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
   }
 }
 
+// Parses a 16-bit mono PCM WAV buffer (as produced by convertWebmToWav) and
+// reports whether it actually contains a non-silent signal. Never logs raw
+// sample data — only aggregate, non-reversible statistics.
+function logWavPcmStats(wavBuffer: Buffer, label: string): void {
+  try {
+    let dataOffset = 12;
+    while (dataOffset < wavBuffer.length) {
+      const chunkId = wavBuffer.toString("ascii", dataOffset, dataOffset + 4);
+      const chunkSize = wavBuffer.readUInt32LE(dataOffset + 4);
+      if (chunkId === "data") {
+        dataOffset += 8;
+        break;
+      }
+      dataOffset += 8 + chunkSize;
+    }
+    const pcm = wavBuffer.subarray(dataOffset);
+    const sampleCount = Math.floor(pcm.length / 2);
+    if (sampleCount === 0) {
+      console.log(`[STT][WAV_STATS][${label}] EMPTY_PCM bytes=${wavBuffer.length}`);
+      return;
+    }
+    let peak = 0;
+    let sumSquares = 0;
+    let nonSilentSamples = 0;
+    const SILENCE_THRESHOLD = 80; // ~0.24% of full scale
+    for (let i = 0; i < sampleCount; i++) {
+      const sample = pcm.readInt16LE(i * 2);
+      const abs = Math.abs(sample);
+      if (abs > peak) peak = abs;
+      if (abs > SILENCE_THRESHOLD) nonSilentSamples++;
+      sumSquares += sample * sample;
+    }
+    const rms = Math.sqrt(sumSquares / sampleCount);
+    const durationSec = sampleCount / 16000;
+    const nonSilentPct = (nonSilentSamples / sampleCount) * 100;
+    console.log(
+      `[STT][WAV_STATS][${label}] durationSec=${durationSec.toFixed(2)} peakPct=${((peak / 32768) * 100).toFixed(1)} rms=${rms.toFixed(1)} nonSilentPct=${nonSilentPct.toFixed(1)}`
+    );
+    if (nonSilentPct < 2) {
+      console.warn(`[STT][WAV_STATS][${label}] WARNING: decoded audio is effectively silent (nonSilentPct<2%)`);
+    }
+  } catch (err) {
+    console.error(`[STT][WAV_STATS][${label}][ERROR]`, err instanceof Error ? err.message : err);
+  }
+}
+
 // Utility to convert WebM/M4A buffer to WAV buffer using fluent-ffmpeg
 async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
   ensureFfmpegExecutable();
@@ -189,7 +235,7 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
   const tmpPath = await createTempAudioFile(audioBuffer, ext);
 
   try {
-    return await new Promise<Buffer>((resolve, reject) => {
+    const wavBuffer = await new Promise<Buffer>((resolve, reject) => {
       const bufs: Buffer[] = [];
       const outputStream = new stream.PassThrough();
       outputStream.on("data", (chunk) => bufs.push(chunk));
@@ -209,6 +255,9 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
         })
         .pipe(outputStream);
     });
+    console.log(`[STT][SERVER][CONVERSION_OK] format=${ext} inputBytes=${audioBuffer.length} wavBytes=${wavBuffer.length}`);
+    logWavPcmStats(wavBuffer, `source=${ext}`);
+    return wavBuffer;
   } finally {
     await removeTempAudioFile(tmpPath);
   }
@@ -247,17 +296,20 @@ class VocabSpeechProvider implements SpeechProvider {
     const pcmData = wavBuffer.subarray(dataOffset);
     
     let combinedTranscript = "";
-    
+    let chunkIndex = 0;
+    const totalChunks = Math.max(1, Math.ceil(pcmData.length / maxChunkBytes));
+
     for (let i = 0; i < pcmData.length; i += maxChunkBytes) {
+      chunkIndex++;
       const slice = pcmData.subarray(i, i + maxChunkBytes);
       const chunkHeader = Buffer.from(headerTemplate);
-      
+
       // Update mathematically strict boundaries targeting the dynamic header properties securely
       chunkHeader.writeUInt32LE(slice.length + headerTemplate.length - 8, 4); // General RIFF file size
       chunkHeader.writeUInt32LE(slice.length, headerTemplate.length - 4);     // Specific 'data' block size
-      
+
       const chunkWav = Buffer.concat([chunkHeader, slice]);
-      
+
       const response = await fetch("https://stt.vocabdotai.com/v1/transcribe?language=hinglish", {
         method: "POST",
         headers: {
@@ -266,25 +318,30 @@ class VocabSpeechProvider implements SpeechProvider {
         },
         body: new Blob([new Uint8Array(chunkWav)], { type: "audio/wav" }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("VocabDotAI API Error:", response.status, errorText);
+        console.error(`[STT][PROVIDER][ERROR] chunk=${chunkIndex}/${totalChunks} status=${response.status} body=${errorText.slice(0, 300)}`);
         throw new Error(`Speech-to-text API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Defensive response parser
       const transcript = data.text ?? data.transcript ?? data.transcription ?? data.result;
-      
+
+      console.log(
+        `[STT][PROVIDER] chunk=${chunkIndex}/${totalChunks} chunkBytes=${chunkWav.length} status=${response.status} responseKeys=${Object.keys(data).join(",")} transcriptLength=${typeof transcript === "string" ? transcript.trim().length : "n/a"}`
+      );
+
       if (typeof transcript === "string") {
         combinedTranscript += (combinedTranscript ? " " : "") + transcript.trim();
       } else {
         throw new Error("Invalid transcription format received from provider.");
       }
     }
-    
+
+    console.log(`[STT][PROVIDER][RESULT] totalChunks=${totalChunks} combinedTranscriptLength=${combinedTranscript.trim().length}`);
     return combinedTranscript;
   }
 }
