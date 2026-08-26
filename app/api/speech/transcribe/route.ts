@@ -9,40 +9,78 @@ import path from "path";
 import os from "os";
 import { enforceLimit } from "@/lib/limits/checkLimits";
 
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-
-// Speech Provider Interface
-interface SpeechProvider {
-  transcribe(audioBlob: Blob): Promise<string>;
-}
-
-function detectInputFormat(buffer: Buffer): string {
-  if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
-    return 'm4a';
-  }
-  if (buffer.length >= 4 && buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
-    return 'webm';
-  }
-  return 'webm';
-}
-
-async function createTempAudioFile(audioBuffer: Buffer, ext: string): Promise<string> {
-  const tmpPath = path.join(os.tmpdir(), `stt_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`);
-  await fs.promises.writeFile(tmpPath, audioBuffer);
-  return tmpPath;
-}
-
-async function removeTempAudioFile(tmpPath: string): Promise<void> {
+function ensureFfmpegExecutable(): string {
+  const binaryPath = ffmpegInstaller.path;
   try {
-    if (fs.existsSync(tmpPath)) {
-      await fs.promises.unlink(tmpPath);
+    if (binaryPath && fs.existsSync(binaryPath)) {
+      fs.chmodSync(binaryPath, 0o755);
     }
   } catch (_) {}
+  ffmpeg.setFfmpegPath(binaryPath);
+  return binaryPath;
+}
+
+ensureFfmpegExecutable();
+
+// Pure JS M4A/MP4 container header parser (reads `mvhd` atom directly from buffer)
+function getM4aDurationInSeconds(buffer: Buffer): number | null {
+  try {
+    let offset = 0;
+    while (offset < buffer.length - 8) {
+      const atomSize = buffer.readUInt32BE(offset);
+      const atomType = buffer.toString('ascii', offset + 4, offset + 8);
+      
+      if (atomType === 'moov' || atomType === 'trak' || atomType === 'mdia') {
+        offset += 8;
+        continue;
+      }
+
+      if (atomType === 'mvhd') {
+        const version = buffer[offset + 8];
+        if (version === 0) {
+          const timeScale = buffer.readUInt32BE(offset + 20);
+          const duration = buffer.readUInt32BE(offset + 24);
+          if (timeScale > 0 && duration > 0) {
+            return duration / timeScale;
+          }
+        } else if (version === 1) {
+          const timeScale = buffer.readUInt32BE(offset + 28);
+          const duration = buffer.readBigUInt64BE(offset + 32);
+          if (timeScale > 0 && duration > 0n) {
+            return Number(duration) / timeScale;
+          }
+        }
+      }
+
+      if (atomSize < 8) break;
+      offset += atomSize;
+    }
+  } catch (err) {
+    console.error('[STT][SERVER][M4A_HEADER_PARSE_ERROR]', err);
+  }
+  return null;
 }
 
 // Utility to securely validate audio duration strictly without unnecessary full-conversions
 async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: number): Promise<void> {
   const ext = detectInputFormat(audioBuffer);
+  console.log(`[STT][SERVER][DURATION_CHECK] format=${ext} size=${audioBuffer.length} maxAllowed=${maxDurationSeconds}s`);
+
+  // Fast path for iOS M4A/AAC: Parse `mvhd` atom directly in pure JS (immune to serverless binary spawn permissions)
+  if (ext === 'm4a') {
+    const parsedDuration = getM4aDurationInSeconds(audioBuffer);
+    if (parsedDuration !== null && parsedDuration > 0) {
+      console.log(`[STT][SERVER][M4A_HEADER_DURATION] duration=${parsedDuration.toFixed(2)}s maxAllowed=${maxDurationSeconds}s`);
+      if (parsedDuration > maxDurationSeconds) {
+        throw new Error("VOICE_DURATION_EXCEEDED");
+      }
+      return;
+    }
+    console.log('[STT][SERVER][M4A_HEADER_DURATION] pure JS parse yielded null, falling back to FFmpeg file probe');
+  }
+
+  // Fallback / WebM path: FFmpeg seekable disk file duration probing
+  ensureFfmpegExecutable();
   const tmpPath = await createTempAudioFile(audioBuffer, ext);
 
   try {
@@ -68,6 +106,7 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
           if (err.message && (err.message.includes("SIGKILL") || err.message.includes("SIGTERM") || err.message.includes("ffmpeg was killed"))) {
             return resolve();
           }
+          console.error('[STT][SERVER][FFMPEG_PROBE_ERROR]', err?.message || err);
           reject(new Error("Failed to determine audio duration"));
         });
 
@@ -93,6 +132,7 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
 
 // Utility to convert WebM/M4A buffer to WAV buffer using fluent-ffmpeg
 async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
+  ensureFfmpegExecutable();
   const ext = detectInputFormat(audioBuffer);
   const tmpPath = await createTempAudioFile(audioBuffer, ext);
 
@@ -108,7 +148,10 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
         .outputFormat("wav")
         .audioChannels(1)
         .audioFrequency(16000)
-        .on("error", (err: Error) => reject(new Error("FFMPEG Conversion Error: " + err.message)))
+        .on("error", (err: Error) => {
+          console.error('[STT][SERVER][CONVERSION_ERROR]', err?.message || err);
+          reject(new Error("FFMPEG Conversion Error: " + err.message));
+        })
         .pipe(outputStream);
     });
   } finally {
