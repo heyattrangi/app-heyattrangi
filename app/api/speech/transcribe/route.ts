@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import stream from "stream";
+import fs from "fs";
+import path from "path";
+import os from "os";
 import { enforceLimit } from "@/lib/limits/checkLimits";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -13,79 +16,104 @@ interface SpeechProvider {
   transcribe(audioBlob: Blob): Promise<string>;
 }
 
-// Utility to securely validate audio duration strictly without unnecessary full-conversions
-async function validateAudioDuration(webmBuffer: Buffer, maxDurationSeconds: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const inputStream = new stream.Readable();
-    inputStream.push(webmBuffer);
-    inputStream.push(null);
-
-    let hasExceeded = false;
-    let isFinished = false;
-    let totalWavBytes = 0;
-
-    const command = ffmpeg(inputStream)
-      .inputFormat("webm")
-      .outputFormat("wav")
-      .audioChannels(1)
-      .audioFrequency(16000)
-      .on("end", () => {
-        if (!isFinished && !hasExceeded) {
-          isFinished = true;
-          resolve();
-        }
-      })
-      .on("error", (err) => {
-        if (isFinished) return;
-        isFinished = true;
-        if (hasExceeded) return;
-        if (err.message && (err.message.includes("SIGKILL") || err.message.includes("SIGTERM") || err.message.includes("ffmpeg was killed"))) {
-          return resolve();
-        }
-        reject(new Error("Failed to determine audio duration"));
-      });
-
-    const dummyStream = new stream.PassThrough();
-    // Critical fix: Decoded WAV bytes map exactly to duration natively (16000Hz * 1ch * 16bit = 32000 bytes/sec).
-    // This perfectly bypasses missing browser WebM headers and unreliable ffmpeg progress hooks.
-    dummyStream.on('data', (chunk) => {
-      if (isFinished) return;
-      totalWavBytes += chunk.length;
-      // 44 bytes offset for WAV header, 32000 bytes exactly per second of raw audio
-      const currentSeconds = Math.max(0, totalWavBytes - 44) / 32000;
-      if (currentSeconds > maxDurationSeconds) {
-        hasExceeded = true;
-        isFinished = true;
-        command.kill("SIGKILL");
-        return reject(new Error("VOICE_DURATION_EXCEEDED"));
-      }
-    }); 
-    
-    command.pipe(dummyStream);
-  });
+function detectInputFormat(buffer: Buffer): string {
+  if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+    return 'm4a';
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+    return 'webm';
+  }
+  return 'webm';
 }
 
-// Utility to convert WebM buffer to WAV buffer using fluent-ffmpeg
-async function convertWebmToWav(webmBuffer: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const inputStream = new stream.Readable();
-    inputStream.push(webmBuffer);
-    inputStream.push(null);
+async function createTempAudioFile(audioBuffer: Buffer, ext: string): Promise<string> {
+  const tmpPath = path.join(os.tmpdir(), `stt_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`);
+  await fs.promises.writeFile(tmpPath, audioBuffer);
+  return tmpPath;
+}
 
-    const bufs: Buffer[] = [];
-    const outputStream = new stream.PassThrough();
-    outputStream.on("data", (chunk) => bufs.push(chunk));
-    outputStream.on("end", () => resolve(Buffer.concat(bufs)));
-    outputStream.on("error", reject);
+async function removeTempAudioFile(tmpPath: string): Promise<void> {
+  try {
+    if (fs.existsSync(tmpPath)) {
+      await fs.promises.unlink(tmpPath);
+    }
+  } catch (_) {}
+}
 
-    ffmpeg(inputStream)
-      .inputFormat("webm")
-      .outputFormat("wav")
-      .audioChannels(1)
-      .audioFrequency(16000)
-      .on("error", (err: Error) => reject(new Error("FFMPEG Conversion Error: " + err.message)))
-      .pipe(outputStream);
-  });
+// Utility to securely validate audio duration strictly without unnecessary full-conversions
+async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: number): Promise<void> {
+  const ext = detectInputFormat(audioBuffer);
+  const tmpPath = await createTempAudioFile(audioBuffer, ext);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      let hasExceeded = false;
+      let isFinished = false;
+      let totalWavBytes = 0;
+
+      const command = ffmpeg(tmpPath)
+        .outputFormat("wav")
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .on("end", () => {
+          if (!isFinished && !hasExceeded) {
+            isFinished = true;
+            resolve();
+          }
+        })
+        .on("error", (err) => {
+          if (isFinished) return;
+          isFinished = true;
+          if (hasExceeded) return;
+          if (err.message && (err.message.includes("SIGKILL") || err.message.includes("SIGTERM") || err.message.includes("ffmpeg was killed"))) {
+            return resolve();
+          }
+          reject(new Error("Failed to determine audio duration"));
+        });
+
+      const dummyStream = new stream.PassThrough();
+      dummyStream.on('data', (chunk) => {
+        if (isFinished) return;
+        totalWavBytes += chunk.length;
+        const currentSeconds = Math.max(0, totalWavBytes - 44) / 32000;
+        if (currentSeconds > maxDurationSeconds) {
+          hasExceeded = true;
+          isFinished = true;
+          command.kill("SIGKILL");
+          return reject(new Error("VOICE_DURATION_EXCEEDED"));
+        }
+      });
+
+      command.pipe(dummyStream);
+    });
+  } finally {
+    await removeTempAudioFile(tmpPath);
+  }
+}
+
+// Utility to convert WebM/M4A buffer to WAV buffer using fluent-ffmpeg
+async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
+  const ext = detectInputFormat(audioBuffer);
+  const tmpPath = await createTempAudioFile(audioBuffer, ext);
+
+  try {
+    return await new Promise<Buffer>((resolve, reject) => {
+      const bufs: Buffer[] = [];
+      const outputStream = new stream.PassThrough();
+      outputStream.on("data", (chunk) => bufs.push(chunk));
+      outputStream.on("end", () => resolve(Buffer.concat(bufs)));
+      outputStream.on("error", reject);
+
+      ffmpeg(tmpPath)
+        .outputFormat("wav")
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .on("error", (err: Error) => reject(new Error("FFMPEG Conversion Error: " + err.message)))
+        .pipe(outputStream);
+    });
+  } finally {
+    await removeTempAudioFile(tmpPath);
+  }
 }
 
 // VocabDotAI Implementation
