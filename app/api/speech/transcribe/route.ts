@@ -383,6 +383,17 @@ export async function POST(req: NextRequest) {
 
     const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null;
 
+    // PHASE 8H — TEMPORARY iOS forensic-testing quota bypass. Controlled by a
+    // single env flag; scoped to this route only; skips ONLY the RPM/daily
+    // message-count checks below. Duration validation, file-size/corruption
+    // checks, and every other limit in the app are untouched.
+    // REMOVE ONCE iOS STT IS FULLY VERIFIED: delete this block, the two
+    // guard conditions around the RPM/daily checks, and unset
+    // IOS_STT_DEBUG_BYPASS_LIMITS in Vercel.
+    const requestPlatform = (req.headers.get("x-heyattrangi-platform") || "unknown").toLowerCase();
+    const iosSttDebugBypass = process.env.IOS_STT_DEBUG_BYPASS_LIMITS === "true" && requestPlatform === "ios";
+    console.log(`[STT][QUOTA] platform=${requestPlatform} debugBypass=${iosSttDebugBypass}`);
+
     // Enforce Audio Duration Limit
     let maxDurationSeconds = 60; // Guest
     let durationMessage = "1 minute";
@@ -421,34 +432,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Enforce RPM (Free: 3, Premium: 5)
-    const rpmCheck = await enforceLimit({
-      userId: session?.user?.id || null,
-      ip: session?.user?.id ? null : ip,
-      action: "VOICE_STT_RPM",
-      plan,
-      limitFree: 3,
-      limitPremium: 5,
-      windowMs: 60 * 1000,
-      errorMessage: "Voice requests per minute limit reached",
-    });
-    if (!rpmCheck.allowed) {
-      return NextResponse.json({ error: "LIMIT_EXCEEDED", message: rpmCheck.message, resetInSeconds: rpmCheck.resetInSeconds }, { status: 429 });
-    }
+    if (!iosSttDebugBypass) {
+      // Enforce RPM (Free: 3, Premium: 5)
+      const rpmCheck = await enforceLimit({
+        userId: session?.user?.id || null,
+        ip: session?.user?.id ? null : ip,
+        action: "VOICE_STT_RPM",
+        plan,
+        limitFree: 3,
+        limitPremium: 5,
+        windowMs: 60 * 1000,
+        errorMessage: "Voice requests per minute limit reached",
+      });
+      if (!rpmCheck.allowed) {
+        return NextResponse.json({ error: "LIMIT_EXCEEDED", message: rpmCheck.message, resetInSeconds: rpmCheck.resetInSeconds }, { status: 429 });
+      }
 
-    // Enforce Daily limit (Free: 10, Premium: 50, Guest: 2)
-    const dailyCheck = await enforceLimit({
-      userId: session?.user?.id || null,
-      ip: session?.user?.id ? null : ip,
-      action: "VOICE_STT_DAILY",
-      plan,
-      limitFree: session?.user?.id ? 10 : 2,
-      limitPremium: 50,
-      windowMs: 24 * 60 * 60 * 1000,
-      errorMessage: "Daily voice message limit reached",
-    });
-    if (!dailyCheck.allowed) {
-      return NextResponse.json({ error: "LIMIT_EXCEEDED", message: dailyCheck.message, resetInSeconds: dailyCheck.resetInSeconds }, { status: 429 });
+      // Enforce Daily limit (Free: 10, Premium: 50, Guest: 2)
+      const dailyCheck = await enforceLimit({
+        userId: session?.user?.id || null,
+        ip: session?.user?.id ? null : ip,
+        action: "VOICE_STT_DAILY",
+        plan,
+        limitFree: session?.user?.id ? 10 : 2,
+        limitPremium: 50,
+        windowMs: 24 * 60 * 60 * 1000,
+        errorMessage: "Daily voice message limit reached",
+      });
+      if (!dailyCheck.allowed) {
+        return NextResponse.json({ error: "LIMIT_EXCEEDED", message: dailyCheck.message, resetInSeconds: dailyCheck.resetInSeconds }, { status: 429 });
+      }
+    } else {
+      console.log(`[STT][QUOTA] platform=ios debugBypass=true dailyLimitBypassed=true rpmLimitBypassed=true`);
     }
 
     // Modular provider pattern - swapping to VocabDotAI
