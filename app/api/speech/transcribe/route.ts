@@ -315,20 +315,24 @@ class VocabSpeechProvider implements SpeechProvider {
         headers: {
           "Authorization": `Token ${token}`,
           "Content-Type": "audio/wav",
+          "Content-Length": String(chunkWav.length),
         },
-        body: new Blob([new Uint8Array(chunkWav)], { type: "audio/wav" }),
+        body: chunkWav as any,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[STT][PROVIDER][ERROR] chunk=${chunkIndex}/${totalChunks} status=${response.status} body=${errorText.slice(0, 300)}`);
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`PROVIDER_AUTH_ERROR (${response.status})`);
+        }
         throw new Error(`Speech-to-text API error: ${response.status}`);
       }
 
       const data = await response.json();
 
-      // Defensive response parser
-      const transcript = data.text ?? data.transcript ?? data.transcription ?? data.result;
+      // Defensive response parser across provider schemas
+      const transcript = data.text ?? data.transcript ?? data.transcription ?? data.result ?? data.output;
 
       console.log(
         `[STT][PROVIDER] chunk=${chunkIndex}/${totalChunks} chunkBytes=${chunkWav.length} status=${response.status} responseKeys=${Object.keys(data).join(",")} rawJson=${JSON.stringify(data).slice(0, 250)}`
