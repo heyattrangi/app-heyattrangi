@@ -22,37 +22,51 @@ function ensureFfmpegExecutable(): string {
 
 ensureFfmpegExecutable();
 
-// Pure JS M4A/MP4 container header parser (reads `mvhd` atom directly from buffer)
+// Pure JS M4A/MP4 container header parser (reads `mvhd` atom directly from buffer with 32-bit & 64-bit box support)
 function getM4aDurationInSeconds(buffer: Buffer): number | null {
   try {
     let offset = 0;
     while (offset < buffer.length - 8) {
-      const atomSize = buffer.readUInt32BE(offset);
+      let atomSize = buffer.readUInt32BE(offset);
       const atomType = buffer.toString('ascii', offset + 4, offset + 8);
-      
+
+      let headerSize = 8;
+      if (atomSize === 1) {
+        if (offset + 16 > buffer.length) break;
+        const bigSize = buffer.readBigUInt64BE(offset + 8);
+        atomSize = Number(bigSize);
+        headerSize = 16;
+      } else if (atomSize === 0) {
+        atomSize = buffer.length - offset;
+      }
+
+      if (atomSize < headerSize) break;
+
       if (atomType === 'moov' || atomType === 'trak' || atomType === 'mdia') {
-        offset += 8;
+        offset += headerSize;
         continue;
       }
 
       if (atomType === 'mvhd') {
-        const version = buffer[offset + 8];
-        if (version === 0) {
-          const timeScale = buffer.readUInt32BE(offset + 20);
-          const duration = buffer.readUInt32BE(offset + 24);
-          if (timeScale > 0 && duration > 0) {
-            return duration / timeScale;
-          }
-        } else if (version === 1) {
-          const timeScale = buffer.readUInt32BE(offset + 28);
-          const duration = buffer.readBigUInt64BE(offset + 32);
-          if (timeScale > 0 && duration > 0n) {
-            return Number(duration) / timeScale;
+        const payloadOffset = offset + headerSize;
+        if (payloadOffset + 32 <= buffer.length) {
+          const version = buffer[payloadOffset];
+          if (version === 0) {
+            const timeScale = buffer.readUInt32BE(payloadOffset + 12);
+            const duration = buffer.readUInt32BE(payloadOffset + 16);
+            if (timeScale > 0 && duration > 0) {
+              return duration / timeScale;
+            }
+          } else if (version === 1) {
+            const timeScale = buffer.readUInt32BE(payloadOffset + 20);
+            const duration = buffer.readBigUInt64BE(payloadOffset + 24);
+            if (timeScale > 0 && duration > 0n) {
+              return Number(duration) / timeScale;
+            }
           }
         }
       }
 
-      if (atomSize < 8) break;
       offset += atomSize;
     }
   } catch (err) {
@@ -68,15 +82,19 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
 
   // Fast path for iOS M4A/AAC: Parse `mvhd` atom directly in pure JS (immune to serverless binary spawn permissions)
   if (ext === 'm4a') {
-    const parsedDuration = getM4aDurationInSeconds(audioBuffer);
-    if (parsedDuration !== null && parsedDuration > 0) {
+    let parsedDuration = getM4aDurationInSeconds(audioBuffer);
+    if (parsedDuration === null || parsedDuration <= 0) {
+      // Conservative AAC bitrate estimation (96kbps / ~12,000 bytes/sec) as fail-safe upper bound
+      parsedDuration = audioBuffer.length / 12000;
+      console.log(`[STT][SERVER][M4A_ESTIMATED_DURATION] estimatedDuration=${parsedDuration.toFixed(2)}s`);
+    } else {
       console.log(`[STT][SERVER][M4A_HEADER_DURATION] duration=${parsedDuration.toFixed(2)}s maxAllowed=${maxDurationSeconds}s`);
-      if (parsedDuration > maxDurationSeconds) {
-        throw new Error("VOICE_DURATION_EXCEEDED");
-      }
-      return;
     }
-    console.log('[STT][SERVER][M4A_HEADER_DURATION] pure JS parse yielded null, falling back to FFmpeg file probe');
+
+    if (parsedDuration > maxDurationSeconds) {
+      throw new Error("VOICE_DURATION_EXCEEDED");
+    }
+    return;
   }
 
   // Fallback / WebM path: FFmpeg seekable disk file duration probing
