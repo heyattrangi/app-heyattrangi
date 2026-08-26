@@ -9,6 +9,35 @@ import path from "path";
 import os from "os";
 import { enforceLimit } from "@/lib/limits/checkLimits";
 
+// Speech Provider Interface
+interface SpeechProvider {
+  transcribe(audioBlob: Blob): Promise<string>;
+}
+
+function detectInputFormat(buffer: Buffer): string {
+  if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+    return 'm4a';
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+    return 'webm';
+  }
+  return 'webm';
+}
+
+async function createTempAudioFile(audioBuffer: Buffer, ext: string): Promise<string> {
+  const tmpPath = path.join(os.tmpdir(), `stt_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`);
+  await fs.promises.writeFile(tmpPath, audioBuffer);
+  return tmpPath;
+}
+
+async function removeTempAudioFile(tmpPath: string): Promise<void> {
+  try {
+    if (fs.existsSync(tmpPath)) {
+      await fs.promises.unlink(tmpPath);
+    }
+  } catch (_) {}
+}
+
 function ensureFfmpegExecutable(): string {
   const binaryPath = ffmpegInstaller.path;
   try {
@@ -60,7 +89,7 @@ function getM4aDurationInSeconds(buffer: Buffer): number | null {
           } else if (version === 1) {
             const timeScale = buffer.readUInt32BE(payloadOffset + 20);
             const duration = buffer.readBigUInt64BE(payloadOffset + 24);
-            if (timeScale > 0 && duration > 0n) {
+            if (timeScale > 0 && duration > BigInt(0)) {
               return Number(duration) / timeScale;
             }
           }
@@ -84,8 +113,10 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
   if (ext === 'm4a') {
     let parsedDuration = getM4aDurationInSeconds(audioBuffer);
     if (parsedDuration === null || parsedDuration <= 0) {
-      // Conservative AAC bitrate estimation (96kbps / ~12,000 bytes/sec) as fail-safe upper bound
-      parsedDuration = audioBuffer.length / 12000;
+      // Fail-safe estimate matching the app's configured HIGH_QUALITY AAC preset
+      // (128kbps = 16,000 bytes/sec) so a header-parse miss doesn't falsely
+      // reject legitimate recordings near the quota boundary.
+      parsedDuration = audioBuffer.length / 16000;
       console.log(`[STT][SERVER][M4A_ESTIMATED_DURATION] estimatedDuration=${parsedDuration.toFixed(2)}s`);
     } else {
       console.log(`[STT][SERVER][M4A_HEADER_DURATION] duration=${parsedDuration.toFixed(2)}s maxAllowed=${maxDurationSeconds}s`);
@@ -108,6 +139,7 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
       let totalWavBytes = 0;
 
       const command = ffmpeg(tmpPath)
+        .inputOptions(["-analyzeduration", "20M", "-probesize", "20M"])
         .outputFormat("wav")
         .audioChannels(1)
         .audioFrequency(16000)
@@ -124,7 +156,9 @@ async function validateAudioDuration(audioBuffer: Buffer, maxDurationSeconds: nu
           if (err.message && (err.message.includes("SIGKILL") || err.message.includes("SIGTERM") || err.message.includes("ffmpeg was killed"))) {
             return resolve();
           }
-          console.error('[STT][SERVER][FFMPEG_PROBE_ERROR]', err?.message || err);
+          console.error(
+            `[STT][DURATION][ERROR] format=${ext} size=${audioBuffer.length} reason=ffmpeg_probe_failed ffmpegPath=${ffmpegInstaller.path} stderr=${err?.message || err}`
+          );
           reject(new Error("Failed to determine audio duration"));
         });
 
@@ -163,11 +197,14 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
       outputStream.on("error", reject);
 
       ffmpeg(tmpPath)
+        .inputOptions(["-analyzeduration", "20M", "-probesize", "20M"])
         .outputFormat("wav")
         .audioChannels(1)
         .audioFrequency(16000)
         .on("error", (err: Error) => {
-          console.error('[STT][SERVER][CONVERSION_ERROR]', err?.message || err);
+          console.error(
+            `[STT][SERVER][CONVERSION_ERROR] format=${ext} size=${audioBuffer.length} ffmpegPath=${ffmpegInstaller.path} stderr=${err?.message || err}`
+          );
           reject(new Error("FFMPEG Conversion Error: " + err.message));
         })
         .pipe(outputStream);
@@ -318,6 +355,9 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+      console.error(
+        `[STT][DURATION][ERROR] size=${webmBuffer.length} reason=unhandled_exception message=${err?.message || err}`
+      );
       return NextResponse.json(
         { error: "Could not safely determine audio duration limit." },
         { status: 400 }
