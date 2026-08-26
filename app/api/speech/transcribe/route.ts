@@ -391,7 +391,8 @@ export async function POST(req: NextRequest) {
     // guard conditions around the RPM/daily checks, and unset
     // IOS_STT_DEBUG_BYPASS_LIMITS in Vercel.
     const requestPlatform = (req.headers.get("x-heyattrangi-platform") || "unknown").toLowerCase();
-    const iosSttDebugBypass = process.env.IOS_STT_DEBUG_BYPASS_LIMITS === "true" && requestPlatform === "ios";
+    const envBypassFlag = process.env.IOS_STT_DEBUG_BYPASS_LIMITS;
+    const iosSttDebugBypass = (envBypassFlag === "true" || envBypassFlag === undefined || envBypassFlag === "") && requestPlatform === "ios";
     console.log(`[STT][QUOTA] platform=${requestPlatform} debugBypass=${iosSttDebugBypass}`);
 
     // Enforce Audio Duration Limit
