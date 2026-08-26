@@ -331,7 +331,7 @@ class VocabSpeechProvider implements SpeechProvider {
       const transcript = data.text ?? data.transcript ?? data.transcription ?? data.result;
 
       console.log(
-        `[STT][PROVIDER] chunk=${chunkIndex}/${totalChunks} chunkBytes=${chunkWav.length} status=${response.status} responseKeys=${Object.keys(data).join(",")} transcriptLength=${typeof transcript === "string" ? transcript.trim().length : "n/a"}`
+        `[STT][PROVIDER] chunk=${chunkIndex}/${totalChunks} chunkBytes=${chunkWav.length} status=${response.status} responseKeys=${Object.keys(data).join(",")} rawJson=${JSON.stringify(data).slice(0, 250)}`
       );
 
       if (typeof transcript === "string") {
@@ -341,7 +341,7 @@ class VocabSpeechProvider implements SpeechProvider {
       }
     }
 
-    console.log(`[STT][PROVIDER][RESULT] totalChunks=${totalChunks} combinedTranscriptLength=${combinedTranscript.trim().length}`);
+    console.log(`[STT][PROVIDER][RESULT] totalChunks=${totalChunks} combinedTranscriptLength=${combinedTranscript.trim().length} transcript="${combinedTranscript.trim()}"`);
     return combinedTranscript;
   }
 }
