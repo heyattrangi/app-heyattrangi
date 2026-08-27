@@ -14,6 +14,17 @@ interface SpeechProvider {
   transcribe(audioBlob: Blob): Promise<string>;
 }
 
+// Thrown when FFmpeg fails to decode the uploaded audio, or produces no
+// usable PCM output. Distinct from "the provider transcribed real audio and
+// found no speech" so the client never sees a misleading "No speech
+// detected." for what is actually a conversion failure.
+class AudioConversionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AudioConversionError";
+  }
+}
+
 function detectInputFormat(buffer: Buffer): string {
   if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
     return 'm4a';
@@ -236,11 +247,24 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
 
   try {
     const wavBuffer = await new Promise<Buffer>((resolve, reject) => {
+      // Settle exactly once, and only from FFmpeg's own command-level
+      // "end"/"error" events — never from the output stream's "end". The
+      // output stream's "end" fires whenever FFmpeg's stdout closes, which
+      // also happens when FFmpeg exits early after a decode failure having
+      // written zero bytes; treating that as success silently turned real
+      // conversion failures into a fake 0-byte "OK" that then flowed into
+      // the provider as an empty WAV (see PHASE 8N investigation).
+      let settled = false;
+      const settleReject = (err: Error) => {
+        if (settled) return;
+        settled = true;
+        reject(err);
+      };
+
       const bufs: Buffer[] = [];
       const outputStream = new stream.PassThrough();
       outputStream.on("data", (chunk) => bufs.push(chunk));
-      outputStream.on("end", () => resolve(Buffer.concat(bufs)));
-      outputStream.on("error", reject);
+      outputStream.on("error", (err) => settleReject(err instanceof Error ? err : new Error(String(err))));
 
       ffmpeg(tmpPath)
         .inputOptions(["-analyzeduration", "20M", "-probesize", "20M"])
@@ -251,10 +275,21 @@ async function convertWebmToWav(audioBuffer: Buffer): Promise<Buffer> {
           console.error(
             `[STT][SERVER][CONVERSION_ERROR] format=${ext} size=${audioBuffer.length} ffmpegPath=${ffmpegInstaller.path} stderr=${err?.message || err}`
           );
-          reject(new Error("FFMPEG Conversion Error: " + err.message));
+          settleReject(new AudioConversionError("FFMPEG Conversion Error: " + err.message));
+        })
+        .on("end", () => {
+          if (settled) return;
+          settled = true;
+          resolve(Buffer.concat(bufs));
         })
         .pipe(outputStream);
     });
+
+    if (wavBuffer.length === 0) {
+      console.error(`[STT][SERVER][CONVERSION_ERROR] format=${ext} size=${audioBuffer.length} reason=empty_output`);
+      throw new AudioConversionError("FFmpeg produced an empty WAV output.");
+    }
+
     console.log(`[STT][SERVER][CONVERSION_OK] format=${ext} inputBytes=${audioBuffer.length} wavBytes=${wavBuffer.length}`);
     logWavPcmStats(wavBuffer, `source=${ext}`);
     return wavBuffer;
@@ -486,6 +521,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ transcript: transcript.trim() });
     
   } catch (error: any) {
+    if (error instanceof AudioConversionError) {
+      // FFmpeg could not decode the uploaded audio (or produced no usable
+      // PCM) — this is never "no speech", the provider was never reached.
+      console.error("[STT][SERVER][AUDIO_CONVERSION_FAILED]", error.message);
+      return NextResponse.json(
+        { error: "AUDIO_CONVERSION_FAILED", message: "Could not process the recorded audio. Please try again." },
+        { status: 400 }
+      );
+    }
     console.error("Speech transcription error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to transcribe audio." },
