@@ -580,7 +580,7 @@ function LibraryPageContent() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                             {/* Interactive Breathing Tool */}
-                            <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center justify-center min-h-[380px] group">
+                            <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center justify-center min-h-[380px] group">
                                 <div className="absolute inset-0 opacity-5 rounded-3xl" style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #3b82f6 0%, transparent 70%)" }}></div>
                                 <div className="relative z-10 text-center flex flex-col items-center h-full">
                                     <div className="mb-2">
@@ -618,7 +618,7 @@ function LibraryPageContent() {
                             </div>
 
                             <RecommendedAudios />
-                            <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-6">
+                            <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-6">
                                 <div>
                                     <h3 className="font-extrabold text-2xl text-slate-900">Recommended Audio Sessions</h3>
                                     <p className="text-slate-400 text-xs font-medium mt-1">Curated for relaxation & focus</p>
@@ -656,7 +656,7 @@ function LibraryPageContent() {
                     <div className="space-y-10 animate-in fade-in duration-300">
                         <div className="max-w-3xl mx-auto">
                             {/* Support Hotlines with enhanced design */}
-                            <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-6">
+                            <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-6">
                                 <div>
                                     <h3 className="font-extrabold text-2xl text-slate-900">Verified Support Lines</h3>
                                     <p className="text-slate-400 text-xs font-medium mt-2">24/7 availability for crisis support</p>
@@ -695,7 +695,7 @@ function LibraryPageContent() {
                     <div className="space-y-10 animate-in fade-in duration-300">
 
                         {/* Special Populations */}
-                        <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow">
+                        <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow">
                             <h3 className="font-extrabold text-2xl mb-8 text-slate-900">Tips for Special Populations</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
@@ -721,7 +721,7 @@ function LibraryPageContent() {
                         </div>
 
                         {/* Reference Articles */}
-                        <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow">
+                        <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow">
                             <h3 className="font-extrabold text-2xl mb-8 text-slate-900">Condition Reference Articles</h3>
                             <div className="divide-y divide-slate-200">
                                 {[
@@ -805,7 +805,7 @@ function LibraryPageContent() {
 
 
                         {/* PDF Downloads with enhanced design */}
-                        <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-8">
+                        <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow space-y-8">
                             <div>
                                 <h3 className="font-extrabold text-2xl text-slate-900">Worksheet Files</h3>
                                 <p className="text-slate-400 text-xs font-medium mt-2">Downloadable resources & worksheets</p>
@@ -841,7 +841,7 @@ function LibraryPageContent() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                             {/* Sudoku with enhanced design */}
-                            <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center">
+                            <div className="bg-white rounded-3xl p-4 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col items-center">
                                 <div className="text-center mb-8">
                                     <h3 className="font-extrabold text-2xl text-slate-900">Brain Busters: Sudoku</h3>
                                     <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest block mt-2">Cognitive Focus</span>
@@ -849,7 +849,7 @@ function LibraryPageContent() {
                                 </div>
 
                                 {/* Grid with enhanced styling */}
-                                <div className="grid grid-cols-9 gap-0.5 border-4 border-slate-900 p-2 bg-slate-900 rounded-xl shadow-2xl mb-8">
+                                <div className="grid grid-cols-9 gap-0.5 border-4 border-slate-900 p-2 bg-slate-900 rounded-xl shadow-2xl mb-8 w-full max-w-[360px]">
                                     {sudokuGrid.map((row, rIdx) =>
                                         row.map((val, cIdx) => (
                                             <input
@@ -858,7 +858,7 @@ function LibraryPageContent() {
                                                 maxLength={1}
                                                 value={val === 0 ? "" : val}
                                                 onChange={(e) => handleSudokuChange(rIdx, cIdx, e.target.value)}
-                                                className={`w-9 h-9 md:w-10 md:h-10 text-center font-black text-sm focus:ring-2 focus:ring-rose-400 rounded border-[1px] transition-all ${sudokuInitial[rIdx][cIdx]
+                                                className={`w-full aspect-square text-center font-black text-xs min-[360px]:text-sm focus:ring-2 focus:ring-rose-400 rounded border-[1px] transition-all ${sudokuInitial[rIdx][cIdx]
                                                     ? "bg-slate-200 text-slate-900 font-extrabold cursor-not-allowed border-slate-300"
                                                     : "bg-white text-rose-600 font-bold border-slate-200 hover:bg-rose-50"
                                                     }`}
@@ -878,7 +878,7 @@ function LibraryPageContent() {
                             </div>
 
                             {/* Thought Diary with enhanced design */}
-                            <div className="bg-white rounded-3xl p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col">
+                            <div className="bg-white rounded-3xl p-5 sm:p-10 border border-slate-200/80 shadow-lg hover:shadow-xl transition-shadow flex flex-col">
                                 <div className="mb-8">
                                     <h3 className="font-extrabold text-2xl text-slate-900">Thought Diary</h3>
                                     <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest block mt-2">Local Journal Log</span>

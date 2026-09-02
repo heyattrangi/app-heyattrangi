@@ -52,57 +52,33 @@ export default function RedesignedIndividualAuthPage() {
         </div>
 
         {/* Middle Content Section */}
-        <div className="flex-grow flex flex-col items-center px-6 py-6 text-center justify-center gap-6">
+        <div className="flex-grow flex flex-col items-center px-6 py-4 text-center justify-center gap-3.5">
           
           {/* Logo Branding Row */}
           <AttrangiLogo />
 
           {/* Wellbeing Heading */}
-          <h2 
-            style={{
-              width: "166.29px",
-              height: "19px",
-              fontFamily: "var(--font-nunito), sans-serif",
-              fontStyle: "normal",
-              fontWeight: 800,
-              fontSize: "12px",
-              lineHeight: "19px",
-              color: "#1E1E1E",
-              textAlign: "center"
-            }}
-            className="flex items-center justify-center font-sans tracking-tight whitespace-nowrap"
-          >
+          <h2 className="font-extrabold text-[13px] sm:text-[14px] text-[#1E1E1E] tracking-tight text-center">
             Built for student wellbeing
           </h2>
 
-          {/* Tagline / Incubation Copy Description */}
-          <div 
-            style={{
-              width: "166.29px",
-              height: "22px",
-              fontFamily: "var(--font-nunito), sans-serif",
-              fontStyle: "normal",
-              fontWeight: 500,
-              fontSize: "7.87185px",
-              lineHeight: "11px",
-              textAlign: "center",
-              color: "#606060"
-            }}
-            className="flex flex-col justify-center items-center select-none font-sans"
-          >
-            Aatrangi is incubated at
-            <br />
-            IIIT Dharwad Research Park
-          </div>
+          {/* Incubation Container */}
+          <div className="flex flex-col items-center gap-1.5 mt-1">
+            <p className="text-[11px] sm:text-[12px] font-medium text-slate-500 tracking-normal text-center">
+              Aatrangi is incubated at
+            </p>
 
-          {/* IDRP Logo Display */}
-          <div className="relative w-[270px] h-[92px] shrink-0 mt-3.5">
-            <Image
-              src="https://res.cloudinary.com/dxoiluua8/image/upload/v1786820584/IDRP_hk4gpn.png"
-              alt="IIT Dharwad Research Park logo"
-              fill
-              className="object-contain"
-            />
+            {/* IDRP Logo Display */}
+            <div className="flex items-center justify-center shrink-0 mt-0.5">
+              <Image
+                src="https://res.cloudinary.com/dxoiluua8/image/upload/v1786820584/IDRP_hk4gpn.png"
+                alt="IIT Dharwad Research Park logo"
+                width={230}
+                height={68}
+                className="w-auto h-14 sm:h-16 object-contain"
+                priority
+              />
+            </div>
           </div>
 
         </div>

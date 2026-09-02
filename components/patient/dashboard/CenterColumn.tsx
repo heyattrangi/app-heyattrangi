@@ -634,7 +634,7 @@ export default function CenterColumn({
                                     {/* Header Row: Title & Avatar */}
                                     <div className="flex items-start justify-between w-full z-10 relative gap-2 min-[360px]:gap-3">
                                         <div className="flex flex-col pl-1 min-[360px]:pl-2.5 min-[390px]:pl-4 min-w-0 flex-1">
-                                            <h1 className="font-sans font-[1000] text-[28px] min-[360px]:text-[32px] min-[390px]:text-[36px] leading-[34px] min-[390px]:leading-[38px] tracking-[-0.5px] text-white whitespace-nowrap truncate">
+                                            <h1 className="font-sans font-[1000] text-[28px] min-[360px]:text-[32px] min-[390px]:text-[36px] leading-[34px] min-[390px]:leading-[38px] tracking-[-0.5px] text-white break-words whitespace-normal">
                                                 Hello, {firstName}
                                             </h1>
                                             <span className="text-[#00829B] text-[13px] min-[360px]:text-[14px] min-[390px]:text-[15px] font-medium mt-2 min-[360px]:mt-3 line-clamp-3 leading-snug break-words pr-2 font-sans tracking-[-0.5px]">
@@ -914,7 +914,7 @@ export default function CenterColumn({
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex flex-col">
                                             <motion.h1
-                                                className="font-sans font-[1000] text-[45px] leading-[38px] tracking-[-0.5px] text-white w-[500px] h-[45px] max-w-full"
+                                                className="font-sans font-[1000] text-[45px] leading-tight tracking-[-0.5px] text-white w-auto max-w-full"
                                             >
                                                 Hello, {firstName}
                                             </motion.h1>

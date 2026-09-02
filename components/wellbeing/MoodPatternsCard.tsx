@@ -6,12 +6,12 @@ import Image from "next/image"
 
 export default function MoodPatternsCard() {
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white rounded-[32px] sm:rounded-[36px] p-5 sm:p-9 border-2 border-black flex flex-row justify-between items-center gap-4 sm:gap-8 relative select-none overflow-hidden h-[180px] sm:h-[250px]">
+    <div className="w-full max-w-2xl mx-auto bg-white rounded-[32px] sm:rounded-[36px] p-5 sm:p-9 border-2 border-black flex flex-col sm:flex-row justify-between items-center gap-6 sm:gap-8 relative select-none overflow-hidden h-auto py-6 sm:h-[250px] sm:py-0">
       
       {/* Left Content Area (55-60% width) */}
-      <div className="flex flex-col gap-3 sm:gap-5 items-start flex-1 min-w-0 z-10 py-1 sm:py-2">
+      <div className="flex flex-col gap-3 sm:gap-5 items-start flex-1 min-w-0 z-10 py-1 sm:py-2 w-full">
         <h2 
-          className="font-semibold text-[20px] sm:text-[24px] leading-[17px] text-[#1E1E1E] w-auto sm:w-[230px] h-auto sm:h-[18px] whitespace-nowrap z-0 flex-none order-0 grow-0"
+          className="font-semibold text-[20px] sm:text-[24px] leading-tight text-[#1E1E1E] w-auto sm:w-[230px] h-auto sm:h-[18px] z-0 flex-none order-0 grow-0"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
           Your mood patterns
@@ -21,10 +21,10 @@ export default function MoodPatternsCard() {
           Look back at your mood and see<br className="hidden sm:inline" /> what’s changed over time.
         </p>
         
-        <Link href="/patient/wellbeing/trends">
+        <Link href="/patient/wellbeing/trends" className="w-full sm:w-auto">
           <button
             aria-label="See mood patterns"
-            className="bg-[#1E1E2E] hover:bg-[#2A2A3F] text-white flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 active:scale-95 shadow-md shadow-black/5 cursor-pointer rounded-full h-[44px] sm:h-[60px] w-[170px] sm:w-[240px] text-xs sm:text-base font-extrabold"
+            className="bg-[#1E1E2E] hover:bg-[#2A2A3F] text-white flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 active:scale-95 shadow-md shadow-black/5 cursor-pointer rounded-full h-[44px] sm:h-[60px] w-full sm:w-[240px] text-xs sm:text-base font-extrabold"
           >
             See patterns <span className="text-sm sm:text-lg font-medium">→</span>
           </button>
