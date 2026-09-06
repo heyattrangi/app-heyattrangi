@@ -290,7 +290,7 @@ export default function WellnessScreeningForm() {
                 </div>
             </div>
 
-            <div className="mx-auto max-w-[600px] rounded-[var(--radius-lg)] bg-[var(--color-surface)] p-[32px]">
+            <div className="mx-auto max-w-[600px] rounded-[var(--radius-lg)] bg-[var(--color-surface)] p-4 sm:p-[32px]">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={step}

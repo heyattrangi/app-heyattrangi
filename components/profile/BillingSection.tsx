@@ -394,7 +394,7 @@ export default function BillingSection({ user, isTestMode = false }: BillingSect
     return (
         <div className="space-y-10">
             {/* Active Plan at Top */}
-            <div className="bg-white rounded-[24px] p-8 shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] border border-gray-50 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[24px] p-4 sm:p-8 shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] border border-gray-50 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Plan</h2>
                     <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${isTestMode ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
@@ -436,7 +436,7 @@ export default function BillingSection({ user, isTestMode = false }: BillingSect
 
             {/* Compare Plans Section Below */}
             <div className="bg-white rounded-[24px] shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] border border-gray-50 overflow-hidden animate-in fade-in duration-300">
-                <div className="p-8 border-b border-gray-50 flex flex-col items-center text-center">
+                <div className="p-4 sm:p-8 border-b border-gray-50 flex flex-col items-center text-center">
                     <h2 className="text-2xl font-black text-gray-900 mb-2">Compare plans</h2>
                     <p className="text-sm text-gray-500 mb-6">
                         Need more details before choosing?{" "}
@@ -694,7 +694,7 @@ export default function BillingSection({ user, isTestMode = false }: BillingSect
             </div>
 
             {/* Transaction History Section */}
-            <div className="bg-white rounded-[24px] p-8 shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] border border-gray-50">
+            <div className="bg-white rounded-[24px] p-4 sm:p-8 shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] border border-gray-50">
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h3 className="text-lg font-bold text-gray-900">Transaction History</h3>

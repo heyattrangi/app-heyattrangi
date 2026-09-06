@@ -42,7 +42,7 @@ export default function MonthlyWellbeing({
       {/* Main White Card */}
       <div
         key={monthLabel}
-        className="bg-white rounded-[32px] px-10 sm:px-14 py-5 sm:py-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-slate-100/80 w-full flex flex-col gap-4 relative animate-in fade-in slide-in-from-right-3 duration-200"
+        className="bg-white rounded-[32px] px-4 min-[360px]:px-6 sm:px-14 py-5 sm:py-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-slate-100/80 w-full flex flex-col gap-4 relative animate-in fade-in slide-in-from-right-3 duration-200"
       >
         {/* Card Header: Month title */}
         <div className="flex justify-between items-center">
@@ -86,7 +86,7 @@ export default function MonthlyWellbeing({
         onClick={onPrevMonth}
         disabled={isPrevDisabled || isLoading}
         aria-label="Previous month"
-        className={`absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
+        className={`absolute left-2 sm:left-0 translate-x-0 sm:-translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
           ${(isPrevDisabled || isLoading) ? "opacity-35 pointer-events-none" : "active:scale-90"}
         `}
       >
@@ -98,7 +98,7 @@ export default function MonthlyWellbeing({
         onClick={onNextMonth}
         disabled={isNextDisabled || isLoading}
         aria-label="Next month"
-        className={`absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
+        className={`absolute right-2 sm:right-0 translate-x-0 sm:translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
           ${(isNextDisabled || isLoading) ? "opacity-35 pointer-events-none" : "active:scale-90"}
         `}
       >

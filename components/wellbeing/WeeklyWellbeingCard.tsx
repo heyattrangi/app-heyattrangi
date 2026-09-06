@@ -40,7 +40,7 @@ export default function WeeklyWellbeingCard({
   return (
     <div className="relative w-full max-w-2xl mx-auto select-none">
       {/* Main White Card */}
-      <div className="bg-white rounded-[32px] px-10 sm:px-14 py-5 sm:py-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-slate-100/80 w-full flex flex-col gap-4 relative">
+      <div className="bg-white rounded-[32px] px-4 min-[360px]:px-6 sm:px-14 py-5 sm:py-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-slate-100/80 w-full flex flex-col gap-4 relative">
 
         {/* Card Header: Week title */}
         <div className="flex justify-between items-center">
@@ -84,7 +84,7 @@ export default function WeeklyWellbeingCard({
         onClick={onPrevWeek}
         disabled={isPrevDisabled || isLoading}
         aria-label="Previous week"
-        className={`absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
+        className={`absolute left-2 sm:left-0 translate-x-0 sm:-translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
           ${(isPrevDisabled || isLoading) ? "opacity-35 pointer-events-none" : "active:scale-90"}
         `}
       >
@@ -96,7 +96,7 @@ export default function WeeklyWellbeingCard({
         onClick={onNextWeek}
         disabled={isNextDisabled || isLoading}
         aria-label="Next week"
-        className={`absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
+        className={`absolute right-2 sm:right-0 translate-x-0 sm:translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-[#FCE8E6] hover:bg-[#FCDAD6] text-[#A53A35] z-20 transition-all duration-200 cursor-pointer shadow-md border border-white/50
           ${(isNextDisabled || isLoading) ? "opacity-35 pointer-events-none" : "active:scale-90"}
         `}
       >

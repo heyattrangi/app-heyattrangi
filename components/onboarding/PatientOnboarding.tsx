@@ -1504,10 +1504,9 @@ function OnboardingCompanionScreen({
                             </div>
                         </motion.div>
 
-                        {/* Companion Image */}
                         <motion.div 
                             variants={itemVariants}
-                            className="w-[235px] h-[235px] min-[360px]:w-[265px] min-[360px]:h-[265px] min-[400px]:w-[290px] min-[400px]:h-[290px] z-20 relative -right-[20px]"
+                            className="w-[235px] h-[235px] min-[360px]:w-[265px] min-[360px]:h-[265px] min-[400px]:w-[290px] min-[400px]:h-[290px] z-20 relative right-0 min-[360px]:-right-2 sm:-right-[20px]"
                         >
                             <img 
                                 src="https://res.cloudinary.com/dxoiluua8/image/upload/v1786966299/bot_welcome_m2mnkm.png"
