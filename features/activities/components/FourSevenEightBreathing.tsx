@@ -19,6 +19,9 @@ export default function FourSevenEightBreathing({
   const [secondsRemaining, setSecondsRemaining] = useState<number>(4)
   const [isPaused, setIsPaused] = useState<boolean>(false)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
+
   const phaseRef = useRef<Phase>(phase)
   const cycleRef = useRef<number>(cycle)
   const isPausedRef = useRef<boolean>(isPaused)
@@ -155,9 +158,11 @@ export default function FourSevenEightBreathing({
       {screen === "detail" && (
         <div style={styles.card}>
           <div style={styles.topRow}>
+            {!isEmbedded && (
             <button onClick={onBack} className="fse-back-link" style={styles.backLink}>
               ← BACK
             </button>
+            )}
           </div>
 
           <div style={styles.iconBoxContainer}>

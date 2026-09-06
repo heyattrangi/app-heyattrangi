@@ -1,5 +1,6 @@
-import Sidebar from "@/components/patient/Sidebar"
+import ExploreDashboardSidebar from "./ExploreDashboardSidebar"
 import LoadingBar from "@/components/ui/LoadingBar"
+import { Suspense } from "react"
 
 export default function ExploreDashboardLayout({
   children,
@@ -9,7 +10,9 @@ export default function ExploreDashboardLayout({
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden relative">
       <LoadingBar />
-      <Sidebar />
+      <Suspense fallback={<div className="w-64 bg-white" />}>
+        <ExploreDashboardSidebar />
+      </Suspense>
       <div className="flex-1 min-w-0 h-full flex flex-col relative overflow-hidden">
         {children}
       </div>

@@ -41,6 +41,8 @@ export default function SessionRecorder({
   const isPaused = phase === "paused"
   const { elapsedMs, reset } = useSessionTimer(isRunning)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
   const buildState = useCallback(
     (nextPhase: SessionPhase): SessionState => ({
       ...createInitialSessionState(activity),
@@ -102,6 +104,7 @@ export default function SessionRecorder({
       <div className="relative min-h-[100dvh] w-full bg-[#f8fafc] flex flex-col items-center justify-center p-4">
         {/* Top Header Row with Close button */}
         <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
+          {!isEmbedded && (
           <button
             onClick={handleExit}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 shadow-sm transition-all"
@@ -111,6 +114,7 @@ export default function SessionRecorder({
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+          )}
         </div>
 
         <GroundingExercise onExit={handleExit} onDone={handleFinish} />

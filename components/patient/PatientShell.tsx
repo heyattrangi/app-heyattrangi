@@ -3,7 +3,7 @@
 import Sidebar from "@/components/patient/Sidebar"
 import LoadingBar from "@/components/ui/LoadingBar"
 import { QuickBreatheButton } from "@/features/activities/components/QuickBreatheButton"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
 /**
@@ -13,8 +13,10 @@ import Link from "next/link"
  */
 export default function PatientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || ""
-  const hideSidebar = pathname.startsWith("/patient/assessments/")
-  const showMobileNav = false
+  const searchParams = useSearchParams()
+  const isEmbedded = searchParams?.get("embedded") === "true";
+  const hideSidebar = pathname.startsWith("/patient/assessments/") || isEmbedded;
+  const showMobileNav = !isEmbedded && false // keeping original false but ensuring it respects embedded
 
   const isHomeActive = pathname === "/patient/dashboard"
   const isExploreActive = pathname.startsWith("/patient/library") || pathname.startsWith("/explore") || pathname.startsWith("/listen") || pathname.startsWith("/read")

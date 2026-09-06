@@ -19,6 +19,9 @@ export default function BellyBreathing({
   const [secondsRemaining, setSecondsRemaining] = useState<number>(4)
   const [isPaused, setIsPaused] = useState<boolean>(false)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
+
   // Ref to hold the current phase value for the timer callback to avoid closure staleness
   const phaseRef = useRef<Phase>(phase)
   const cycleRef = useRef<number>(cycle)
@@ -159,9 +162,11 @@ export default function BellyBreathing({
       {screen === "detail" && (
         <div style={styles.card}>
           <div style={styles.topRow}>
+            {!isEmbedded && (
             <button onClick={onBack} className="bb-back-link" style={styles.backLink}>
               ← BACK
             </button>
+            )}
           </div>
 
           <div style={styles.iconBoxContainer}>

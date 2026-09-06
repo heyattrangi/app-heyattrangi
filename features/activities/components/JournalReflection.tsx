@@ -33,6 +33,8 @@ export default function JournalReflection({
     4: "",
   })
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
   const handleBegin = () => {
     setScreen("exercise")
     setCurrentStep(0)
@@ -119,9 +121,11 @@ export default function JournalReflection({
       {screen === "detail" && (
         <div style={styles.card}>
           <div style={styles.topRow}>
+            {!isEmbedded && (
             <button onClick={onBack} className="jr-back-link" style={styles.backLink}>
               ← BACK
             </button>
+            )}
           </div>
 
           <div style={styles.iconBoxContainer}>

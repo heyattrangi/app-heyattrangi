@@ -83,6 +83,8 @@ export function BodyScanSession({
   const [feeling, setFeeling] = useState<ScanFeeling | null>(null)
   const [endedEarly, setEndedEarly] = useState(false)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
   const startedAtIsoRef = useRef("")
   const savedRef = useRef(false)
   const dimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -426,12 +428,14 @@ export function BodyScanSession({
     return (
       <SessionHydrationGate hydrated={hydrated}>
         <div className="mx-auto min-h-[100dvh] max-w-lg bg-canvas px-5 pb-10 pt-10">
+          {!isEmbedded && (
           <Link
             href={backHref}
             className="mb-6 inline-flex min-h-11 items-center text-sm text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Explore
           </Link>
+          )}
           <h1 className="text-3xl font-semibold tracking-tight text-ink">
             {activity.title}
           </h1>
