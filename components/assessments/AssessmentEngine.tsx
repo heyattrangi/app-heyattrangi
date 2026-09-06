@@ -130,6 +130,13 @@ export default function AssessmentEngine() {
     // Results State
     const [finalResults, setFinalResults] = useState<any>(null)
     const [limitInfo, setLimitInfo] = useState<LimitExceededInfo | null>(null)
+    const [isEmbedded, setIsEmbedded] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+            setIsEmbedded(true)
+        }
+    }, [])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -370,6 +377,18 @@ export default function AssessmentEngine() {
         }
     }
 
+    const handleExit = (completed: boolean = false) => {
+        if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+            if (completed) {
+                window.parent.postMessage({ type: 'TASK_COMPLETED', actionType: 'ASSESSMENT', result: finalResults }, '*');
+            } else {
+                window.parent.postMessage({ type: 'TASK_CANCELLED' }, '*');
+            }
+        } else {
+            router.push('/patient/library');
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-white w-full max-w-4xl mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-sm">
             {/* Header */}
@@ -383,12 +402,14 @@ export default function AssessmentEngine() {
                         <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Guided clinical screener</p>
                     </div>
                 </div>
+                {!isEmbedded && (
                 <button 
-                    onClick={() => router.push('/patient/library')}
+                    onClick={() => handleExit(false)}
                     className="text-[11px] sm:text-xs font-bold text-slate-500 hover:text-slate-800 uppercase tracking-wider whitespace-nowrap flex-shrink-0 ml-4"
                 >
                     Cancel
                 </button>
+                )}
             </div>
 
             {/* Chat Area */}
@@ -468,10 +489,10 @@ export default function AssessmentEngine() {
                 {phase === "results" && finalResults && (
                     <div className="max-w-2xl mx-auto w-full text-center">
                         <button 
-                            onClick={() => router.push('/patient/library')}
+                            onClick={() => handleExit(true)}
                             className="bg-slate-800 hover:bg-black text-white font-bold py-3 px-8 rounded-full shadow-md transition-all uppercase tracking-wider text-xs sm:text-sm"
                         >
-                            Return to Library
+                            {isEmbedded ? "Back to Chatbot" : "Return to Library"}
                         </button>
                     </div>
                 )}
@@ -483,12 +504,14 @@ export default function AssessmentEngine() {
                     <div className="w-full max-w-xl mx-auto flex flex-col">
                         {/* Header Navigation */}
                         <div className="mb-6 flex flex-col items-start">
+                            {!isEmbedded && (
                             <button
-                                onClick={() => router.push('/patient/library')}
+                                onClick={() => handleExit(true)}
                                 className="inline-flex items-center gap-1.5 text-[#2E626A] hover:text-[#204a50] font-semibold text-sm transition-colors mb-4 focus:outline-none focus:ring-2 focus:ring-[#2E626A] focus:ring-offset-2 rounded"
                             >
                                 <ChevronLeft className="w-4 h-4" strokeWidth={3} /> Back to Assessments
                             </button>
+                            )}
                             <h2 className="text-3xl font-bold text-[#1E2429] leading-tight mb-1">Assessment Results</h2>
                             <p className="text-[#7A828A] text-sm font-normal">Completed {formatDate(finalResults.date)}</p>
                         </div>
@@ -552,17 +575,19 @@ export default function AssessmentEngine() {
                         {/* Action Buttons */}
                         <div className="flex flex-col gap-3 w-full mb-6">
                             <button
-                                onClick={() => router.push('/patient/library')}
+                                onClick={() => handleExit(true)}
                                 className="w-full h-14 bg-[#2E626A] hover:bg-[#204a50] active:scale-[0.99] text-white rounded-full font-semibold text-base transition-all flex items-center justify-center shadow-sm"
                             >
-                                Return to Assessments
+                                {isEmbedded ? "Back to Chatbot" : "Return to Assessments"}
                             </button>
+                            {!isEmbedded && (
                             <button
                                 onClick={() => router.push('/patient/wellbeing')}
                                 className="w-full h-14 bg-transparent border-2 border-[#2E626A] hover:bg-[#2E626A]/5 active:scale-[0.99] text-[#2E626A] rounded-full font-semibold text-base transition-all flex items-center justify-center"
                             >
                                 Explore wellbeing tools
                             </button>
+                            )}
                         </div>
 
                         {/* Recommendations */}

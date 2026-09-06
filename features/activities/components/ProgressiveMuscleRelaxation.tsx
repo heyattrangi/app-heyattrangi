@@ -73,6 +73,9 @@ export default function ProgressiveMuscleRelaxation({
   const [screen, setScreen] = useState<"detail" | "exercise" | "complete">("exercise")
   const [currentStep, setCurrentStep] = useState<number>(0)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
+
   const handleBegin = () => {
     setScreen("exercise")
     setCurrentStep(0)
@@ -134,9 +137,11 @@ export default function ProgressiveMuscleRelaxation({
       {screen === "detail" && (
         <div style={styles.card}>
           <div style={styles.topRow}>
+            {!isEmbedded && (
             <button onClick={onBack} className="pmr-back-link" style={styles.backLink}>
               ← BACK
             </button>
+            )}
           </div>
 
           <div style={styles.iconBoxContainer}>

@@ -288,6 +288,32 @@ export default function TryPragyaChat({
     const [showPremiumVoiceModal, setShowPremiumVoiceModal] = useState(false);
     const [cumulativeVoiceUsed, setCumulativeVoiceUsed] = useState(0);
 
+    const [activeTaskUrl, setActiveTaskUrl] = useState<string | null>(null);
+
+    const sendMessageRef = useRef<(e?: React.FormEvent, retryMsg?: string) => Promise<void>>(() => Promise.resolve());
+    
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data?.type === 'TASK_COMPLETED') {
+                setActiveTaskUrl(null);
+                let feedbackMsg = "I just finished the recommended task.";
+                if (event.data.actionType === 'ASSESSMENT') {
+                    const severity = event.data.result?.severity || 'successfully';
+                    feedbackMsg = `I just finished the assessment. My result indicates: ${severity}.`;
+                } else if (event.data.actionType === 'ACTIVITY') {
+                    const seconds = Math.round((event.data.result?.elapsedMs || 0) / 1000);
+                    feedbackMsg = seconds > 0 ? `I just finished the activity. It took ${seconds} seconds.` : `I just finished the activity.`;
+                }
+                sendMessageRef.current(undefined, feedbackMsg);
+            } else if (event.data?.type === 'TASK_CANCELLED') {
+                setActiveTaskUrl(null);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
     const [activeSessionId, setActiveSessionId] = useState(() => {
         const uniqueId = Math.random().toString(36).substring(2, 10);
         return `${sessionId}_${uniqueId}`;
@@ -498,10 +524,11 @@ export default function TryPragyaChat({
         sendMessage(undefined, suggestion);
     };
 
-    const sendMessage = async (e?: FormEvent, retryMsg?: string) => {
+    const sendMessage = async (e?: React.FormEvent, retryMsg?: string) => {
         e?.preventDefault();
+        const textToSubmit = retryMsg || inputMessage.trim();
+        if (!textToSubmit) return;
         if (
-            (!inputMessage.trim() && !retryMsg) ||
             isLoading ||
             isSendingRef.current ||
             !guestTrialHydrated
@@ -663,6 +690,10 @@ export default function TryPragyaChat({
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        sendMessageRef.current = sendMessage;
+    }, [sendMessage]);
 
     const queryMessage = searchParams ? searchParams.get("q") : null;
     const initAttemptedRef = useRef(false);
@@ -1150,12 +1181,19 @@ export default function TryPragyaChat({
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <Link
-                                                            href={isGuestSession ? `/auth/signin?callbackUrl=${encodeURIComponent(msg.action.url)}` : msg.action.url}
+                                                        <button
+                                                            onClick={() => {
+                                                                if (isGuestSession) {
+                                                                    window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(msg.action!.url)}`;
+                                                                } else {
+                                                                    const separator = msg.action!.url.includes("?") ? "&" : "?";
+                                                                    setActiveTaskUrl(msg.action!.url + separator + "embedded=true");
+                                                                }
+                                                            }}
                                                             className="px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[12px] font-black tracking-widest uppercase transition-all shadow-md hover:shadow-orange-500/20 whitespace-nowrap text-center self-stretch md:self-center flex items-center justify-center"
                                                         >
                                                             {msg.action.type === "ACTIVITY" ? "Start Activity" : "Start Recommended Task"}
-                                                        </Link>
+                                                        </button>
                                                     </div>
                                                 )}
                                                 {msg.isError && lastUserMessage && (
@@ -1454,6 +1492,38 @@ export default function TryPragyaChat({
                                 Got it
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Task Execution Modal */}
+            {activeTaskUrl && (
+                <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        className="absolute inset-0 bg-black/50 backdrop-blur-[3px]"
+                        onClick={() => setActiveTaskUrl(null)}
+                    />
+                    <div className="relative z-10 w-full sm:max-w-[420px] md:max-w-xl lg:max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden flex flex-col">
+                        <div className="h-1 w-full shrink-0" style={{ background: "linear-gradient(90deg, var(--color-brand), var(--color-brand-soft, #f97316))" }} />
+                        <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-[var(--color-border)] bg-gray-50">
+                            <span className="text-[14px] font-bold text-[var(--color-text-primary)]">Recommended Task</span>
+                            <button
+                                onClick={() => setActiveTaskUrl(null)}
+                                className="rounded-full p-1.5 text-gray-500 hover:bg-gray-200 transition-colors"
+                                aria-label="Close"
+                            >
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <iframe
+                            src={activeTaskUrl}
+                            className="w-full h-full min-h-0 border-none flex-1 bg-white"
+                            title="Task Execution"
+                        />
                     </div>
                 </div>
             )}

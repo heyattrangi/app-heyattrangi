@@ -16,8 +16,11 @@ export default function RecorderHeader({
   isPaused,
   onExit,
 }: RecorderHeaderProps) {
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
   return (
     <header className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-100/80 bg-white/70 backdrop-blur-md">
+      {!isEmbedded ? (
       <button
         type="button"
         onClick={onExit}
@@ -26,6 +29,9 @@ export default function RecorderHeader({
       >
         <X className="w-4 h-4" strokeWidth={2.5} aria-hidden />
       </button>
+      ) : (
+        <div className="w-10 h-10" />
+      )}
 
       <h1 className="min-w-0 flex-1 text-center font-bold text-[15px] sm:text-base text-slate-800 tracking-tight truncate px-2">
         {title}

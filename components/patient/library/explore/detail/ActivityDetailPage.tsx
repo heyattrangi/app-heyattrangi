@@ -45,6 +45,13 @@ export default function ActivityDetailPage({
   const [completedSession, setCompletedSession] = useState<SessionState | null>(
     null
   )
+  const [isEmbedded, setIsEmbedded] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+      setIsEmbedded(true)
+    }
+  }, [])
 
   useEffect(() => {
     setView("detail")
@@ -52,7 +59,11 @@ export default function ActivityDetailPage({
   }, [activity.id])
 
   const goBack = () => {
-    router.push(buildExploreHref({ mode: "activities" }))
+    if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+       window.parent.postMessage({ type: 'TASK_CANCELLED' }, '*');
+    } else {
+       router.push(buildExploreHref({ mode: "activities" }))
+    }
   }
 
   const openActivity = (next: ExploreActivity) => {
@@ -67,15 +78,21 @@ export default function ActivityDetailPage({
   }
 
   const exitSession = () => {
-    setCompletedSession(null)
-    setView("detail")
+    if (isEmbedded) {
+        window.parent.postMessage({ type: 'TASK_CANCELLED' }, '*');
+    } else {
+        setCompletedSession(null)
+        setView("detail")
+    }
   }
 
   const searchParams = useSearchParams()
 
   const finishSession = (state: SessionState) => {
     setCompletedSession(state)
-    setView("complete")
+    if (!isEmbedded) {
+        setView("complete")
+    }
 
     const mode = searchParams.get("mode")
     let dbSlug = activity.slug
@@ -114,12 +131,21 @@ export default function ActivityDetailPage({
           });
         }
       })
-      .catch(err => console.error("Network error logging wellness activity:", err));
+      .catch(err => console.error("Network error logging wellness activity:", err))
+      .finally(() => {
+          if (isEmbedded) {
+              window.parent.postMessage({ type: 'TASK_COMPLETED', actionType: 'ACTIVITY', result: state }, '*');
+          }
+      });
   }
 
   const goToExplore = () => {
-    setCompletedSession(null)
-    router.push(buildExploreHref({ mode: "activities" }))
+    if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+        window.parent.postMessage({ type: 'TASK_COMPLETED', actionType: 'ACTIVITY', result: completedSession }, '*');
+    } else {
+        setCompletedSession(null)
+        router.push(buildExploreHref({ mode: "activities" }))
+    }
   }
 
   return (
@@ -151,6 +177,7 @@ export default function ActivityDetailPage({
           >
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="p-6 md:p-8 w-full max-w-2xl mx-auto pb-10 md:pb-16">
+                {!isEmbedded && (
                 <button
                   type="button"
                   onClick={goBack}
@@ -160,6 +187,7 @@ export default function ActivityDetailPage({
                   <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
                   Back
                 </button>
+                )}
 
                 <div className="space-y-8 md:space-y-10">
                   <ActivityHero activity={activity} />

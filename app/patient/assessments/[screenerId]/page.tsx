@@ -112,6 +112,25 @@ export default function AssessmentPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [results, setResults] = useState<any>(null)
+    const [isEmbedded, setIsEmbedded] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+            setIsEmbedded(true)
+        }
+    }, [])
+
+    const handleExit = (completed: boolean = false) => {
+        if (typeof window !== 'undefined' && window.location.search.includes('embedded=true')) {
+            if (completed) {
+                window.parent.postMessage({ type: 'TASK_COMPLETED', actionType: 'ASSESSMENT', result: results }, '*');
+            } else {
+                window.parent.postMessage({ type: 'TASK_CANCELLED' }, '*');
+            }
+        } else {
+            router.push('/patient/library');
+        }
+    }
 
     useEffect(() => {
         if (screenerId && SCREENERS[screenerId]) {
@@ -247,12 +266,14 @@ export default function AssessmentPage() {
         <div className="flex-1 h-screen overflow-y-auto w-full bg-[#FCFAF7] text-slate-800 flex flex-col font-sans">
             <div className="px-3.5 py-4 min-[360px]:px-4.5 min-[360px]:py-5 min-[390px]:px-5 md:p-8 flex-1 w-full max-w-3xl mx-auto flex flex-col">
 
+                {!isEmbedded && (
                 <button
-                    onClick={() => router.push('/patient/library')}
+                    onClick={() => handleExit(false)}
                     className="hidden md:flex text-[10px] min-[360px]:text-[11px] font-black text-slate-400 hover:text-slate-800 transition-colors uppercase tracking-widest items-center gap-1 mb-5 min-[360px]:mb-6 min-[390px]:mb-8 w-fit"
                 >
                     <ArrowLeft className="w-3 h-3" /> Back to Library
                 </button>
+                )}
 
                 {!isComplete ? (
                     <div className="flex-1 flex flex-col animate-in fade-in duration-500">
@@ -260,13 +281,15 @@ export default function AssessmentPage() {
                         <div className="md:hidden flex-1 flex flex-col">
                             {/* Mobile Header */}
                             <div className="flex flex-col mb-5 w-full px-1 relative">
+                                {!isEmbedded && (
                                 <button
-                                    onClick={() => router.push('/patient/library')}
+                                    onClick={() => handleExit(false)}
                                     className="text-slate-700 hover:text-black transition-colors absolute left-1 top-0.5"
                                     aria-label="Back to Library"
                                 >
                                     <ChevronLeft className="w-6 h-6 stroke-[2]" />
                                 </button>
+                                )}
                                 <h1 className="font-semibold text-[16px] text-slate-500 tracking-tight text-center">
                                     {screener.title}
                                 </h1>
@@ -496,7 +519,7 @@ export default function AssessmentPage() {
                                     Retry Submission
                                 </button>
                                 <button
-                                    onClick={() => setSubmitError(null)}
+                                    onClick={() => handleExit(false)}
                                     className="px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-bold text-sm transition-all"
                                 >
                                     Back
@@ -530,12 +553,14 @@ export default function AssessmentPage() {
                     <div className="flex-1 flex flex-col items-center justify-start w-full max-w-xl mx-auto px-4 py-6 sm:py-8 md:py-12 select-none animate-in fade-in duration-500">
                         {/* Header Navigation */}
                         <div className="w-full mb-6 flex flex-col items-start">
+                            {!isEmbedded && (
                             <button
-                                onClick={() => router.push('/patient/library')}
+                                onClick={() => handleExit(true)}
                                 className="inline-flex items-center gap-1.5 text-[#2E626A] hover:text-[#204a50] font-semibold text-sm transition-colors mb-4 focus:outline-none focus:ring-2 focus:ring-[#2E626A] focus:ring-offset-2 rounded"
                             >
                                 <ChevronLeft className="w-4 h-4" strokeWidth={3} /> Back to Assessments
                             </button>
+                            )}
                             <h2 className="text-3xl font-bold text-[#1E2429] leading-tight mb-1">Assessment Results</h2>
                             <p className="text-[#7A828A] text-sm font-normal">Completed {formatDate()}</p>
                         </div>
@@ -601,10 +626,10 @@ export default function AssessmentPage() {
                         {/* Return to Assessments Button */}
                         <div className="w-full mb-6">
                             <button
-                                onClick={() => router.push('/patient/library')}
+                                onClick={() => handleExit(true)}
                                 className="w-full h-14 bg-[#2C332E] hover:bg-[#1E2420] active:scale-[0.99] text-white rounded-full font-semibold text-base transition-all flex items-center justify-center shadow-sm"
                             >
-                                Return to Assessments
+                                {isEmbedded ? "Back to Chatbot" : "Return to Assessments"}
                             </button>
                         </div>
 

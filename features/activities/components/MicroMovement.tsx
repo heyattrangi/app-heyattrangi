@@ -45,6 +45,8 @@ export default function MicroMovement({ onBack, onDone }: MicroMovementProps = {
   const [screen, setScreen] = useState<"detail" | "exercise" | "complete">("exercise")
   const [currentStep, setCurrentStep] = useState<number>(0)
 
+  const isEmbedded = typeof window !== 'undefined' && window.location.search.includes('embedded=true')
+
   const handleBegin = () => {
     setScreen("exercise")
     setCurrentStep(0)
@@ -110,6 +112,7 @@ export default function MicroMovement({ onBack, onDone }: MicroMovementProps = {
         <div style={styles.card}>
           {/* Back link */}
           <div style={styles.topRow}>
+            {!isEmbedded && (
             <button
               onClick={onBack}
               className="mm-back-link"
@@ -117,6 +120,7 @@ export default function MicroMovement({ onBack, onDone }: MicroMovementProps = {
             >
               ← BACK
             </button>
+            )}
           </div>
 
           {/* Icon box */}
